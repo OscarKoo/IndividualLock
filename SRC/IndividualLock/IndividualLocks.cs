@@ -6,7 +6,7 @@ using Nito.AsyncEx;
 
 namespace IndividualLock
 {
-    public abstract class IndividualLock<TKey, TValue>
+    public abstract class IndividualLocks<TKey, TValue>
         where TValue : new()
     {
         class LockingObject
@@ -24,7 +24,7 @@ namespace IndividualLock
         readonly ConcurrentDictionaryLazy<TKey, LockingObject> objects;
         DateTime nextCheckTime;
 
-        protected IndividualLock(IEqualityComparer<TKey> comparer = null, TimeSpan? expiration = null)
+        protected IndividualLocks(IEqualityComparer<TKey> comparer = null, TimeSpan? expiration = null)
         {
             this.expiration = expiration;
             this.nextCheckTime = expiration == null ? DateTime.MaxValue : GetNextCheckTime(DateTime.Now);
@@ -93,13 +93,13 @@ namespace IndividualLock
 
     #region string / object
 
-    public class IndividualLock<TKey> : IndividualLock<TKey, object>
+    public class IndividualLocks<TKey> : IndividualLocks<TKey, object>
     {
-        public IndividualLock(IEqualityComparer<TKey> comparer) : this(comparer, null) { }
+        public IndividualLocks(IEqualityComparer<TKey> comparer) : this(comparer, null) { }
 
-        public IndividualLock(TimeSpan? expiration) : this(null, expiration) { }
+        public IndividualLocks(TimeSpan? expiration) : this(null, expiration) { }
 
-        public IndividualLock(IEqualityComparer<TKey> comparer = null, TimeSpan? expiration = null) : base(comparer, expiration) { }
+        public IndividualLocks(IEqualityComparer<TKey> comparer = null, TimeSpan? expiration = null) : base(comparer, expiration) { }
 
         public object Lock(TKey key)
         {
@@ -107,26 +107,26 @@ namespace IndividualLock
         }
     }
 
-    public class IndividualLock : IndividualLock<string>
+    public class IndividualLocks : IndividualLocks<string>
     {
-        public IndividualLock(IEqualityComparer<string> comparer) : this(comparer, null) { }
+        public IndividualLocks(IEqualityComparer<string> comparer) : this(comparer, null) { }
 
-        public IndividualLock(TimeSpan? expiration) : this(null, expiration) { }
+        public IndividualLocks(TimeSpan? expiration) : this(null, expiration) { }
 
-        public IndividualLock(IEqualityComparer<string> comparer = null, TimeSpan? expiration = null) : base(comparer ?? StringComparer.Ordinal, expiration) { }
+        public IndividualLocks(IEqualityComparer<string> comparer = null, TimeSpan? expiration = null) : base(comparer ?? StringComparer.Ordinal, expiration) { }
     }
 
     #endregion
 
     #region string / AsyncLock
 
-    public class IndividualLockAsync<TKey> : IndividualLock<TKey, AsyncLock>
+    public class IndividualLocksAsync<TKey> : IndividualLocks<TKey, AsyncLock>
     {
-        public IndividualLockAsync(IEqualityComparer<TKey> comparer) : this(comparer, null) { }
+        public IndividualLocksAsync(IEqualityComparer<TKey> comparer) : this(comparer, null) { }
 
-        public IndividualLockAsync(TimeSpan? expiration) : this(null, expiration) { }
+        public IndividualLocksAsync(TimeSpan? expiration) : this(null, expiration) { }
 
-        public IndividualLockAsync(IEqualityComparer<TKey> comparer = null, TimeSpan? expiration = null) : base(comparer, expiration) { }
+        public IndividualLocksAsync(IEqualityComparer<TKey> comparer = null, TimeSpan? expiration = null) : base(comparer, expiration) { }
 
         public IDisposable Lock(TKey key, CancellationToken? cancellationToken = null)
         {
@@ -139,13 +139,13 @@ namespace IndividualLock
         }
     }
 
-    public class IndividualLockAsync : IndividualLockAsync<string>
+    public class IndividualLocksAsync : IndividualLocksAsync<string>
     {
-        public IndividualLockAsync(IEqualityComparer<string> comparer) : this(comparer, null) { }
+        public IndividualLocksAsync(IEqualityComparer<string> comparer) : this(comparer, null) { }
 
-        public IndividualLockAsync(TimeSpan? expiration) : this(null, expiration) { }
+        public IndividualLocksAsync(TimeSpan? expiration) : this(null, expiration) { }
 
-        public IndividualLockAsync(IEqualityComparer<string> comparer = null, TimeSpan? expiration = null) : base(comparer ?? StringComparer.Ordinal, expiration) { }
+        public IndividualLocksAsync(IEqualityComparer<string> comparer = null, TimeSpan? expiration = null) : base(comparer ?? StringComparer.Ordinal, expiration) { }
     }
 
     #endregion

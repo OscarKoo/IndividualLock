@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>IndividualLock</id>
+    <version>$version$</version>
+    <title>$title$</title>
+    <authors>Oscar Koo</authors>
+    <owners>Oscar Koo</owners>
+    <licenseUrl>https://github.com/OscarKoo/IndividualLock/blob/master/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/OscarKoo/IndividualLock</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/OscarKoo/IndividualLock/master/favicon.ico</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>$description$</description>
+    <releaseNotes>sync / async lock for individual keys.</releaseNotes>
+    <copyright>Copyright 2019 Oscar Koo</copyright>
+    <tags>individual keys lock sync async</tags>
+    <dependencies>
+        <dependency id="Nito.AsyncEx" version="4.0.1" />
+    </dependencies>
+  </metadata>
+</package>
