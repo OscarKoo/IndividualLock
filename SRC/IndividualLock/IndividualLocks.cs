@@ -22,22 +22,29 @@ namespace IndividualLock
 
         readonly TimeSpan? expiration;
         readonly ConcurrentDictionaryLazy<TKey, LockingObject> objects;
-        DateTime nextCheckTime;
+        DateTime? nextCheckTime;
 
         protected IndividualLocks(IEqualityComparer<TKey> comparer = null, TimeSpan? expiration = null)
         {
             this.expiration = expiration;
-            this.nextCheckTime = expiration == null ? DateTime.MaxValue : GetNextCheckTime(DateTime.Now);
             this.objects = new ConcurrentDictionaryLazy<TKey, LockingObject>(comparer ?? EqualityComparer<TKey>.Default);
         }
 
         protected TValue GetLock(TKey key)
         {
-            var now = DateTime.Now;
+            DateTime? expiry = null;
 
+            if (this.expiration == null)
+                return this.objects.GetOrAdd(key, k => new LockingObject(expiry)).Data;
+
+            var now = DateTime.Now;
             RemoveExpiries(now);
 
-            var expiry = this.expiration == null ? (DateTime?)null : GetNextCheckTime(now);
+            expiry = GetNextCheckTime(now);
+
+            if (this.nextCheckTime == null)
+                this.nextCheckTime = expiry;
+
             return this.objects.AddOrUpdate(key, k => new LockingObject(expiry), (k, v) => v.Expiry = expiry).Data;
         }
 
@@ -48,7 +55,7 @@ namespace IndividualLock
 
         bool RequireRemoveExpiries(DateTime now)
         {
-            return this.expiration != null && this.nextCheckTime <= now;
+            return this.expiration != null && this.nextCheckTime != null && this.nextCheckTime <= now;
         }
 
         void RemoveExpiries(DateTime now)
@@ -61,20 +68,7 @@ namespace IndividualLock
                 if (!RequireRemoveExpiries(now))
                     return;
 
-                var nextTime = GetNextCheckTime(now);
-
-                var expiries = this.objects.Where(w =>
-                {
-                    var expiry = w.Value.Expiry.Value;
-
-                    if (expiry <= now)
-                        return true;
-
-                    if (expiry < nextTime)
-                        nextTime = expiry;
-
-                    return false;
-                }).ToList();
+                var expiries = this.objects.Where(w => w.Value.Expiry <= now).ToList();
 
                 expiries.ParallelForEach(kv =>
                 {
@@ -86,7 +80,7 @@ namespace IndividualLock
                         this.objects.Remove(kv.Key);
                 });
 
-                this.nextCheckTime = nextTime;
+                this.nextCheckTime = GetNextCheckTime(now);
             }
         }
     }
