@@ -4,11 +4,15 @@
 
 sync / async lock for individual keys
 
-Supports '.NET 4.5+'
+Supports `.NET 4.5+`
 
 ## Getting Started
 
 Install the [NuGet package](https://www.nuget.org/packages/IndividualLock/).
+
+## Release Notes
+
+See the [Release Notes](ReleaseNotes.md)
 
 ## Examples
 

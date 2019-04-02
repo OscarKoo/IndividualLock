@@ -11,9 +11,9 @@
     <iconUrl>https://raw.githubusercontent.com/OscarKoo/IndividualLock/master/favicon.ico</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>$description$</description>
-    <releaseNotes>sync / async lock for individual keys.</releaseNotes>
+    <releaseNotes>Visit the project's url to see the Release Notes</releaseNotes>
     <copyright>Copyright 2019 Oscar Koo</copyright>
-    <tags>individual keys lock sync async</tags>
+    <tags>individual separate key sync async lock</tags>
     <dependencies>
         <dependency id="Nito.AsyncEx" version="4.0.1" />
     </dependencies>

@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 // 控制。更改这些特性值可修改
 // 与程序集关联的信息。
 [assembly: AssemblyTitle("IndividualLock")]
-[assembly: AssemblyDescription("sync / async lock for individual keys")]
+[assembly: AssemblyDescription("sync / async lock for individual separate key")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Oscar Koo")]
 [assembly: AssemblyProduct("IndividualLock")]
