@@ -2,9 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using Dao.ConcurrentDictionaryLazy;
 using Nito.AsyncEx;
 
-namespace IndividualLock
+namespace Dao.IndividualLock
 {
     public abstract class IndividualLocks<TKey, TValue>
         where TValue : new()

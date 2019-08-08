@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Nito.AsyncEx;
 
-namespace IndividualLock
+namespace Dao.IndividualLock
 {
     static class Extensions
     {
