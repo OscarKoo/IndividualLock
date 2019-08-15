@@ -4,11 +4,13 @@
 
 sync / async lock for individual keys
 
-Supports `.NET 4.5+`
+Supports `.NET 4.0+`
 
 ## Getting Started
 
-Install the [NuGet package](https://www.nuget.org/packages/IndividualLock/).
+Install the 2.0 [NuGet package](https://www.nuget.org/packages/Dao.IndividualLock).
+
+~~Install the 1.0 [NuGet package](https://www.nuget.org/packages/IndividualLock/).~~
 
 ## Release Notes
 
