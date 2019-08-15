@@ -24,6 +24,7 @@ namespace Dao.IndividualLock
         readonly TimeSpan? expiration;
         readonly ConcurrentDictionaryLazy<TKey, LockingObject> objects;
         DateTime? nextCheckTime;
+        readonly SynchronizedCollection<DateTime> timeStack = new SynchronizedCollection<DateTime>();
 
         protected IndividualLocks(IEqualityComparer<TKey> comparer = null, TimeSpan? expiration = null)
         {
@@ -38,20 +39,24 @@ namespace Dao.IndividualLock
             if (this.expiration == null)
                 return this.objects.GetOrAdd(key, k => new LockingObject(expiry)).Data;
 
-            var now = DateTime.Now;
-            RemoveExpiries(now);
+            var now = RemoveExpiries(key);
 
-            expiry = GetNextCheckTime(now);
+            expiry = NewExpiryTime(now);
 
             if (this.nextCheckTime == null)
-                this.nextCheckTime = expiry;
+                this.nextCheckTime = GetNextCheckTime(now);
 
             return this.objects.AddOrUpdate(key, k => new LockingObject(expiry), (k, v) => v.Expiry = expiry).Data;
         }
 
-        DateTime GetNextCheckTime(DateTime now)
+        DateTime NewExpiryTime(DateTime now)
         {
             return now.AddMilliseconds(this.expiration.Value.TotalMilliseconds);
+        }
+
+        DateTime GetNextCheckTime(DateTime checkTime)
+        {
+            return checkTime.AddMilliseconds(Math.Max(60000, this.expiration.Value.TotalMilliseconds / 10));
         }
 
         bool RequireRemoveExpiries(DateTime now)
@@ -59,30 +64,91 @@ namespace Dao.IndividualLock
             return this.expiration != null && this.nextCheckTime != null && this.nextCheckTime <= now;
         }
 
-        void RemoveExpiries(DateTime now)
+        static bool IsExpired(LockingObject obj, DateTime checkTime)
         {
-            if (!RequireRemoveExpiries(now))
-                return;
+            return obj.Expiry <= checkTime;
+        }
 
-            lock (this.objects)
+        // Pop the last stack item.
+        void PopTimeStack()
+        {
+            lock (this.timeStack.SyncRoot)
             {
-                if (!RequireRemoveExpiries(now))
-                    return;
-
-                var expiries = this.objects.Where(w => w.Value.Expiry <= now).ToList();
-
-                expiries.ParallelForEach(kv =>
-                {
-                    var obj = kv.Value.Data;
-                    var asyncLock = obj as AsyncLock;
-
-                    if (asyncLock == null && !obj.IsLocked()
-                        || asyncLock != null && !asyncLock.IsLocked())
-                        this.objects.Remove(kv.Key);
-                });
-
-                this.nextCheckTime = GetNextCheckTime(now);
+                this.timeStack.RemoveAt(this.timeStack.Count - 1);
             }
+        }
+
+        DateTime RemoveExpiries(TKey key)
+        {
+            var now = DateTime.Now;
+
+            if (!RequireRemoveExpiries(now))
+                return now;
+
+            var isFirst = this.timeStack.Count == 0;
+
+            // push now into the stack
+            this.timeStack.Add(now);
+
+            // get the first check time.
+            var checkTime = this.timeStack[0];
+
+            var isLocked = false;
+            if (RequireRemoveExpiries(checkTime)
+                && this.objects.TryGetValue(key, out var lockingObject)
+                && IsExpired(lockingObject, checkTime))
+            {
+                if (!isFirst)
+                {
+                    if (!Monitor.TryEnter(this))
+                    {
+                        lock (lockingObject)
+                        {
+                            lockingObject.Expiry = NewExpiryTime(now);
+                        }
+
+                        PopTimeStack();
+                        return now;
+                    }
+
+                    isLocked = true;
+                }
+
+                try
+                {
+                    lock (this)
+                    {
+                        if (RequireRemoveExpiries(checkTime))
+                        {
+                            var expiries = this.objects.Where(w => IsExpired(w.Value, checkTime)).ToList();
+
+                            expiries.ParallelForEach(kv =>
+                            {
+                                var obj = kv.Value.Data;
+                                var asyncLock = obj as AsyncLock;
+
+                                lock (kv.Value)
+                                {
+                                    if (IsExpired(kv.Value, checkTime)
+                                        && (asyncLock == null && !obj.IsLocked()
+                                            || asyncLock != null && !asyncLock.IsLocked()))
+                                        this.objects.Remove(kv.Key);
+                                }
+                            });
+
+                            this.nextCheckTime = GetNextCheckTime(checkTime);
+                        }
+                    }
+                }
+                finally
+                {
+                    if (isLocked)
+                        Monitor.Exit(this);
+                }
+            }
+
+            PopTimeStack();
+            return now;
         }
     }
 
