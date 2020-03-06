@@ -20,7 +20,7 @@ See the [Release Notes](ReleaseNotes.md)
 
 Individual key has its own locking object, you can avoid to lock all the requests via one object.
 
-And it can detect the locking object is being locked or not and release the idle locking objects according the expiration automatically.
+And it can detect the locking object is being locked or not and release the idle locking objects according to the expiration automatically.
 
 FOR Sync scenario: use 'lock' to lock object
 
