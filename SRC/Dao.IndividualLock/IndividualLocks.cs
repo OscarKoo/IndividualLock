@@ -7,6 +7,7 @@ using Nito.AsyncEx;
 
 namespace Dao.IndividualLock
 {
+    [Serializable]
     public abstract class IndividualLocks<TKey, TValue>
         where TValue : new()
     {

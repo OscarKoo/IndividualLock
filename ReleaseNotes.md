@@ -1,5 +1,10 @@
 ## Release Notes
 
+### 2.1.0
+
+Support Serializable Attribute.
+
+
 ### 2.0.3
 
 Improve the logic of cleanup.
