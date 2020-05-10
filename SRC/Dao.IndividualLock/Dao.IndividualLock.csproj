@@ -1,10 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>NET40;NET45;</TargetFrameworks>
+    <TargetFrameworks>NET45;</TargetFrameworks>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageId>Dao.IndividualLock</PackageId>
-    <Version>2.1.0.0</Version>
+    <Version>2.2.0.0</Version>
     <Authors>Oscar Koo</Authors>
     <Description>sync / async lock for individual separate key</Description>
     <PackageLicenseUrl>https://github.com/OscarKoo/IndividualLock/blob/master/LICENSE</PackageLicenseUrl>
@@ -29,7 +29,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dao.ConcurrentDictionaryLazy" Version="1.1.0" />
+    <PackageReference Include="Dao.ConcurrentDictionaryLazy" Version="1.2.0" />
   </ItemGroup>
 
   <ItemGroup>

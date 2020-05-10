@@ -4,7 +4,7 @@
 
 sync / async lock for individual keys
 
-Supports `.NET 4.0+`
+Supports `.NET 4.5+`
 
 ## Getting Started
 

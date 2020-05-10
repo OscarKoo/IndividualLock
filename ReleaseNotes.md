@@ -1,5 +1,10 @@
 ## Release Notes
 
+### 2.2.0
+
+Update ConcurrentDictionaryLazy to 1.2.0
+
+
 ### 2.1.0
 
 Support Serializable Attribute.
