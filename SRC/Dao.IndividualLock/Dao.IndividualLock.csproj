@@ -4,7 +4,7 @@
     <TargetFrameworks>NET45;</TargetFrameworks>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageId>Dao.IndividualLock</PackageId>
-    <Version>2.2.0.0</Version>
+    <Version>3.0.0.0</Version>
     <Authors>Oscar Koo</Authors>
     <Description>sync / async lock for individual separate key</Description>
     <PackageLicenseUrl>https://github.com/OscarKoo/IndividualLock/blob/master/LICENSE</PackageLicenseUrl>
@@ -16,17 +16,7 @@
     <RepositoryUrl>https://www.nuget.org/packages/Dao.ConcurrentDictionaryLazy</RepositoryUrl>
   </PropertyGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'NET45'">
-    <PackageReference Include="Nito.AsyncEx">
-      <Version>4.0.1</Version>
-    </PackageReference>
-  </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'NET40'">
-    <PackageReference Include="Nito.AsyncEx">
-      <Version>4.0.1</Version>
-    </PackageReference>
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Dao.ConcurrentDictionaryLazy" Version="1.2.0" />

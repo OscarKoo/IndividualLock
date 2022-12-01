@@ -1,5 +1,9 @@
 ## Release Notes
 
+### 3.0.0
+
+Simplify the IndividualLocks, and removed dependency of AsyncLock, and use SemaphoreSlim instead.
+
 ### 2.2.0
 
 Update ConcurrentDictionaryLazy to 1.2.0

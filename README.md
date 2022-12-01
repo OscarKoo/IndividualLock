@@ -8,7 +8,7 @@ Supports `.NET 4.5+`
 
 ## Getting Started
 
-Install the 2.0 [NuGet package](https://www.nuget.org/packages/Dao.IndividualLock).
+Install the 3.0 [NuGet package](https://www.nuget.org/packages/Dao.IndividualLock).
 
 ~~Install the 1.0 [NuGet package](https://www.nuget.org/packages/IndividualLock/).~~
 
@@ -20,18 +20,18 @@ See the [Release Notes](ReleaseNotes.md)
 
 Individual key has its own locking object, you can avoid to lock all the requests via one object.
 
-And it can detect the locking object is being locked or not and release the idle locking objects according to the expiration automatically.
+And it can release the locking objects (and keys) automatically.
 
-FOR Sync scenario: use 'lock' to lock object
+FOR Sync scenario: use 'using' to lock object
 
 ```C#
-static readonly IndividualLocks mutex = new IndividualLocks(TimeSpan.FromHours(1));
+static readonly IndividualLocks<string> mutex = new IndividualLocks<string>();
 
 public void Work(DateTime date, string people)
 {
     var key = GenerateKey(date, people);
 
-    lock (mutex.Lock(key))
+    using (mutex.Lock(key))
     {
         // Do tasks
     }
@@ -42,7 +42,7 @@ public void Work(DateTime date, string people)
 FOR Async & Sync mixed scenario:  use 'using' to lock object
 
 ```C#
-static readonly IndividualLocksAsync mutex = new IndividualLocksAsync(StringComparer.OrdinalIgnoreCase);
+static readonly IndividualLocks<string> mutex = new IndividualLocks<string>(StringComparer.OrdinalIgnoreCase);
 
 public void Work(string city, string area)
 {

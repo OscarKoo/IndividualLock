@@ -1,214 +1,115 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Diagnostics;
 using System.Threading;
+using System.Threading.Tasks;
 using Dao.ConcurrentDictionaryLazy;
-using Nito.AsyncEx;
 
 namespace Dao.IndividualLock
 {
     [Serializable]
-    public abstract class IndividualLocks<TKey, TValue>
-        where TValue : new()
+    public class IndividualLocks<TKey>
     {
-        class LockingObject
+        sealed class LockingObject : IDisposable
         {
-            internal LockingObject(DateTime? expiry = null)
+            internal readonly SemaphoreSlim locker = new SemaphoreSlim(1, 1);
+
+            internal TKey key;
+            internal volatile IndividualLocks<TKey> host;
+            internal volatile int count;
+
+            volatile bool disposed;
+            internal bool Disposed => this.disposed;
+
+            internal void Dispose(bool release)
             {
-                Expiry = expiry;
+                lock (this)
+                {
+                    this.count--;
+                    if (release)
+                    {
+                        this.locker.Release();
+                        Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({this.key}) released. (locking count: {this.count}, keys count: {this.host.objects.Count})");
+                    }
+
+                    if (this.count <= 0)
+                    {
+                        var tmpHost = this.host;
+                        this.host = null;
+                        tmpHost.objects.Remove(this.key);
+                        this.locker.Dispose();
+                        this.disposed = true;
+                        Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({this.key}) removed! (locking count: {this.count}, keys count: {tmpHost.objects.Count})");
+                    }
+                }
             }
 
-            internal readonly TValue Data = new TValue();
-            internal DateTime? Expiry { get; set; }
+            public void Dispose()
+            {
+                Dispose(true);
+            }
         }
 
-        readonly TimeSpan? expiration;
         readonly ConcurrentDictionaryLazy<TKey, LockingObject> objects;
-        DateTime? nextCheckTime;
-        readonly SynchronizedCollection<DateTime> timeStack = new SynchronizedCollection<DateTime>();
 
-        protected IndividualLocks(IEqualityComparer<TKey> comparer = null, TimeSpan? expiration = null)
+        public IndividualLocks(IEqualityComparer<TKey> comparer = null)
         {
-            this.expiration = expiration;
             this.objects = new ConcurrentDictionaryLazy<TKey, LockingObject>(comparer ?? EqualityComparer<TKey>.Default);
         }
 
-        protected TValue GetLock(TKey key)
+        public int Count => this.objects.Count;
+
+        LockingObject GetLocker(TKey key)
         {
-            DateTime? expiry = null;
-
-            if (this.expiration == null)
-                return this.objects.GetOrAdd(key, k => new LockingObject(expiry)).Data;
-
-            var now = RemoveExpiries(key);
-
-            expiry = NewExpiryTime(now);
-
-            if (this.nextCheckTime == null)
-                this.nextCheckTime = GetNextCheckTime(now);
-
-            return this.objects.AddOrUpdate(key, k => new LockingObject(expiry), (k, v) => v.Expiry = expiry).Data;
-        }
-
-        DateTime NewExpiryTime(DateTime now)
-        {
-            return now.AddMilliseconds(this.expiration.Value.TotalMilliseconds);
-        }
-
-        DateTime GetNextCheckTime(DateTime checkTime)
-        {
-            return checkTime.AddMilliseconds(Math.Max(60000, this.expiration.Value.TotalMilliseconds / 10));
-        }
-
-        bool RequireRemoveExpiries(DateTime now)
-        {
-            return this.expiration != null && this.nextCheckTime != null && this.nextCheckTime <= now;
-        }
-
-        static bool IsExpired(LockingObject obj, DateTime checkTime)
-        {
-            return obj.Expiry <= checkTime;
-        }
-
-        // Pop the last stack item.
-        void PopTimeStack()
-        {
-            lock (this.timeStack.SyncRoot)
+            NewEntry:
+            var locker = this.objects.GetOrAdd(key, k => new LockingObject());
+            lock (locker)
             {
-                this.timeStack.RemoveAt(this.timeStack.Count - 1);
+                if (locker.Disposed)
+                    goto NewEntry;
+
+                locker.key = key;
+                locker.host = this;
+                locker.count++;
+                Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({key}) acquiring the lock... (locking count: {locker.count}, keys count: {this.objects.Count})");
+                return locker;
             }
         }
 
-        DateTime RemoveExpiries(TKey key)
+        public IDisposable Lock(TKey key, CancellationToken cancellationToken = new CancellationToken())
         {
-            var now = DateTime.Now;
-
-            if (!RequireRemoveExpiries(now))
-                return now;
-
-            var isFirst = this.timeStack.Count == 0;
-
-            // push now into the stack
-            this.timeStack.Add(now);
-
-            // get the first check time.
-            var checkTime = this.timeStack[0];
-
-            var isLocked = false;
-            if (RequireRemoveExpiries(checkTime)
-                && this.objects.TryGetValue(key, out var lockingObject)
-                && IsExpired(lockingObject, checkTime))
+            var locker = GetLocker(key);
+            try
             {
-                if (!isFirst)
-                {
-                    if (!Monitor.TryEnter(this))
-                    {
-                        lock (lockingObject)
-                        {
-                            lockingObject.Expiry = NewExpiryTime(now);
-                        }
-
-                        PopTimeStack();
-                        return now;
-                    }
-
-                    isLocked = true;
-                }
-
-                try
-                {
-                    lock (this)
-                    {
-                        if (RequireRemoveExpiries(checkTime))
-                        {
-                            var expiries = this.objects.Where(w => IsExpired(w.Value, checkTime)).ToList();
-
-                            expiries.ParallelForEach(kv =>
-                            {
-                                var obj = kv.Value.Data;
-                                var asyncLock = obj as AsyncLock;
-
-                                lock (kv.Value)
-                                {
-                                    if (IsExpired(kv.Value, checkTime)
-                                        && (asyncLock == null && !obj.IsLocked()
-                                            || asyncLock != null && !asyncLock.IsLocked()))
-                                        this.objects.Remove(kv.Key);
-                                }
-                            });
-
-                            this.nextCheckTime = GetNextCheckTime(checkTime);
-                        }
-                    }
-                }
-                finally
-                {
-                    if (isLocked)
-                        Monitor.Exit(this);
-                }
+                locker.locker.Wait(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({key}) cancelled. (locking count: {locker.count}, keys count: {this.objects.Count})");
+                locker.Dispose(false);
+                throw;
             }
 
-            PopTimeStack();
-            return now;
+            Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({key}) got the lock! (locking count: {locker.count}, keys count: {this.objects.Count})");
+            return locker;
         }
-    }
 
-    #region string / object
-
-    public class IndividualLocks<TKey> : IndividualLocks<TKey, object>
-    {
-        public IndividualLocks(IEqualityComparer<TKey> comparer) : this(comparer, null) { }
-
-        public IndividualLocks(TimeSpan? expiration) : this(null, expiration) { }
-
-        public IndividualLocks(IEqualityComparer<TKey> comparer = null, TimeSpan? expiration = null) : base(comparer, expiration) { }
-
-        public object Lock(TKey key)
+        public async Task<IDisposable> LockAsync(TKey key, CancellationToken cancellationToken = new CancellationToken())
         {
-            return GetLock(key);
+            var locker = GetLocker(key);
+            try
+            {
+                await locker.locker.WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({key}) cancelled async. (locking count: {locker.count}, keys count: {this.objects.Count})");
+                locker.Dispose(false);
+                throw;
+            }
+
+            Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({key}) got the lock async! (locking count: {locker.count}, keys count: {this.objects.Count})");
+            return locker;
         }
     }
-
-    public class IndividualLocks : IndividualLocks<string>
-    {
-        public IndividualLocks(IEqualityComparer<string> comparer) : this(comparer, null) { }
-
-        public IndividualLocks(TimeSpan? expiration) : this(null, expiration) { }
-
-        public IndividualLocks(IEqualityComparer<string> comparer = null, TimeSpan? expiration = null) : base(comparer ?? StringComparer.Ordinal, expiration) { }
-    }
-
-    #endregion
-
-    #region string / AsyncLock
-
-    public class IndividualLocksAsync<TKey> : IndividualLocks<TKey, AsyncLock>
-    {
-        public IndividualLocksAsync(IEqualityComparer<TKey> comparer) : this(comparer, null) { }
-
-        public IndividualLocksAsync(TimeSpan? expiration) : this(null, expiration) { }
-
-        public IndividualLocksAsync(IEqualityComparer<TKey> comparer = null, TimeSpan? expiration = null) : base(comparer, expiration) { }
-
-        public IDisposable Lock(TKey key, CancellationToken? cancellationToken = null)
-        {
-            return GetLock(key).Lock(cancellationToken ?? CancellationToken.None);
-        }
-
-        public AwaitableDisposable<IDisposable> LockAsync(TKey key, CancellationToken? cancellationToken = null)
-        {
-            return GetLock(key).LockAsync(cancellationToken ?? CancellationToken.None);
-        }
-    }
-
-    public class IndividualLocksAsync : IndividualLocksAsync<string>
-    {
-        public IndividualLocksAsync(IEqualityComparer<string> comparer) : this(comparer, null) { }
-
-        public IndividualLocksAsync(TimeSpan? expiration) : this(null, expiration) { }
-
-        public IndividualLocksAsync(IEqualityComparer<string> comparer = null, TimeSpan? expiration = null) : base(comparer ?? StringComparer.Ordinal, expiration) { }
-    }
-
-    #endregion
 }
