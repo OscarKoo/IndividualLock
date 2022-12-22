@@ -3,6 +3,7 @@
 ### 3.0.0
 
 Simplify the IndividualLocks, and removed dependency of AsyncLock, and use SemaphoreSlim instead.
+Notice: use "using" (instead of "lock") for all locking statements
 
 ### 2.2.0
 
