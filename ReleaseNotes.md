@@ -1,4 +1,10 @@
-## Release Notes
+# Release Notes
+
+## IndividualLocks
+
+### 3.0.1
+
+ready for IndividualReadWriteLocks
 
 ### 3.0.0
 
@@ -31,5 +37,11 @@ Improve the logic of cleanup.
 
 
 ### 1.0.1
+
+Start.
+
+## IndividualReadWriteLocks
+
+### 1.0.0
 
 Start.

@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.28307.539
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dao.IndividualLock", "Dao.IndividualLock\Dao.IndividualLock.csproj", "{6D47C591-CC25-4D69-88E5-2AAAD0BBF629}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dao.IndividualLock", "Dao.IndividualLock\Dao.IndividualLock.csproj", "{6D47C591-CC25-4D69-88E5-2AAAD0BBF629}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dao.IndividualReadWriteLocks", "Dao.IndividualReadWriteLocks\Dao.IndividualReadWriteLocks.csproj", "{B783A727-4736-4226-A589-FB7A9CFAC6D2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{6D47C591-CC25-4D69-88E5-2AAAD0BBF629}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6D47C591-CC25-4D69-88E5-2AAAD0BBF629}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6D47C591-CC25-4D69-88E5-2AAAD0BBF629}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B783A727-4736-4226-A589-FB7A9CFAC6D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B783A727-4736-4226-A589-FB7A9CFAC6D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B783A727-4736-4226-A589-FB7A9CFAC6D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B783A727-4736-4226-A589-FB7A9CFAC6D2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

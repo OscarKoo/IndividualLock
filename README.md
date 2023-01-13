@@ -8,7 +8,9 @@ Supports `.NET 4.5+`
 
 ## Getting Started
 
-Install the 3.0 [NuGet package](https://www.nuget.org/packages/Dao.IndividualLock).
+IndividualLocks Install the 3.0 [NuGet package](https://www.nuget.org/packages/Dao.IndividualLock).
+
+IndividualReadWriteLocks Install the 1.0 [NuGet package](https://www.nuget.org/packages/Dao.IndividualReadWriteLock/1.0.0). 
 
 ~~Install the 1.0 [NuGet package](https://www.nuget.org/packages/IndividualLock/).~~
 
