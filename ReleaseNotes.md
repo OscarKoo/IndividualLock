@@ -2,6 +2,10 @@
 
 ## IndividualLocks
 
+### 3.0.2
+
+Optimize the code.
+
 ### 3.0.1
 
 ready for IndividualReadWriteLocks
@@ -38,10 +42,14 @@ Improve the logic of cleanup.
 
 ### 1.0.1
 
-Start.
+Start point.
 
 ## IndividualReadWriteLocks
 
+### 1.0.1
+
+Optimize the code.
+
 ### 1.0.0
 
-Start.
+Start point.

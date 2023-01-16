@@ -8,6 +8,7 @@ using Nito.AsyncEx;
 
 namespace Dao.IndividualReadWriteLocks
 {
+    [Serializable]
     public class IndividualReadWriteLocks<TKey>
     {
         #region LockingObject
@@ -20,21 +21,25 @@ namespace Dao.IndividualReadWriteLocks
             TKey key;
             volatile IndividualReadWriteLocks<TKey> host;
 
+            internal LockingObject(IndividualReadWriteLocks<TKey> host, TKey key)
+            {
+                this.host = host;
+                this.key = key;
+            }
+
             volatile int refCount;
             internal int RefCount => this.refCount;
 
             volatile bool disposed;
             internal bool Disposed => this.disposed;
 
-            internal void Bind(TKey key, IndividualReadWriteLocks<TKey> host)
+            internal void Capture()
             {
                 lock (this.syncObj)
                 {
                     if (this.disposed)
                         throw new ObjectDisposedException(nameof(LockingObject));
 
-                    this.key = key;
-                    this.host = host;
                     this.refCount++;
                 }
             }
@@ -54,7 +59,9 @@ namespace Dao.IndividualReadWriteLocks
                     {
                         var tmpHost = this.host;
                         this.host = null;
-                        tmpHost.objects.Remove(this.key);
+                        var tmpKey = this.key;
+                        this.key = default(TKey);
+                        tmpHost.objects.Remove(tmpKey);
                         this.disposed = true;
                         Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({this.key}) removed! (locking count: {RefCount}, keys count: {tmpHost.Count})");
                     }
@@ -102,13 +109,6 @@ namespace Dao.IndividualReadWriteLocks
             }
         }
 
-        public interface IUpgradeableReader : IDisposable
-        {
-            IDisposable Upgrade(CancellationToken cancellationToken = new CancellationToken());
-
-            Task<IDisposable> UpgradeAsync(CancellationToken cancellationToken = new CancellationToken());
-        }
-
         #endregion
 
         readonly ConcurrentDictionaryLazy<TKey, LockingObject> objects;
@@ -123,13 +123,13 @@ namespace Dao.IndividualReadWriteLocks
         LockingObject GetLocker(TKey key)
         {
             NewEntry:
-            var locker = this.objects.GetOrAdd(key, k => new LockingObject());
+            var locker = this.objects.GetOrAdd(key, k => new LockingObject(this, k));
             lock (locker.syncObj)
             {
                 if (locker.Disposed)
                     goto NewEntry;
 
-                locker.Bind(key, this);
+                locker.Capture();
                 Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({key}) acquiring the lock... (locking count: {locker.RefCount}, keys count: {Count})");
                 return locker;
             }
@@ -260,5 +260,12 @@ namespace Dao.IndividualReadWriteLocks
         }
 
         #endregion
+    }
+
+    public interface IUpgradeableReader : IDisposable
+    {
+        IDisposable Upgrade(CancellationToken cancellationToken = new CancellationToken());
+
+        Task<IDisposable> UpgradeAsync(CancellationToken cancellationToken = new CancellationToken());
     }
 }

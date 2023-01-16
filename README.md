@@ -12,8 +12,6 @@ IndividualLocks Install the 3.0 [NuGet package](https://www.nuget.org/packages/D
 
 IndividualReadWriteLocks Install the 1.0 [NuGet package](https://www.nuget.org/packages/Dao.IndividualReadWriteLock/1.0.0). 
 
-~~Install the 1.0 [NuGet package](https://www.nuget.org/packages/IndividualLock/).~~
-
 ## Release Notes
 
 See the [Release Notes](ReleaseNotes.md)
@@ -69,6 +67,46 @@ public async Task WorkAsync(string city, string area)
 }
 ```
 
+IndividualReadWriteLocks Examples
+
+```C#
+static readonly IndividualReadWriteLocks<string> locks = new IndividualReadWriteLocks<string>(StringComparer.OrdinalIgnoreCase);
+
+public void Read(string city, string area)
+{
+    var key = GenerateKey(city, area);
+
+    using (mutex.ReaderLock(key))
+    {
+        // Do tasks
+    }
+}
+
+public void Write(string city, string area)
+{
+    var key = GenerateKey(city, area);
+
+    using (mutex.WriterLock(key))
+    {
+        // Do tasks
+    }
+}
+
+public async Task WorkAsync(string city, string area)
+{
+    var key = GenerateKey(city, area);
+
+    using (var upgrade = await mutex.UpgradeableReaderLockAsync(key))
+    {
+        // Do read tasks
+
+        using (await upgrade.UpgradeAsync())
+        {
+            // Do write tasks
+        }
+    }
+}
+```
 
 
 
