@@ -26,8 +26,8 @@ namespace Dao.IndividualLock
                 this.key = key;
             }
 
-            volatile int refCount;
-            internal int RefCount => this.refCount;
+            volatile int usage;
+            internal int Usage => this.usage;
 
             volatile bool disposed;
             internal bool Disposed => this.disposed;
@@ -39,7 +39,7 @@ namespace Dao.IndividualLock
                     if (this.disposed)
                         throw new ObjectDisposedException(nameof(LockingObject));
 
-                    this.refCount++;
+                    this.usage++;
                 }
             }
 
@@ -47,14 +47,14 @@ namespace Dao.IndividualLock
             {
                 lock (this.syncObj)
                 {
-                    this.refCount--;
+                    this.usage--;
                     if (release)
                     {
                         this.locker.Release();
-                        Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({this.key}) released. (locking count: {RefCount}, keys count: {this.host.Count})");
+                        Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({this.key}) released. (locking usage: {Usage}, keys count: {this.host.Count})");
                     }
 
-                    if (this.refCount <= 0)
+                    if (this.usage <= 0)
                     {
                         var tmpHost = this.host;
                         this.host = null;
@@ -63,7 +63,7 @@ namespace Dao.IndividualLock
                         tmpHost.objects.Remove(tmpKey);
                         this.locker.Dispose();
                         this.disposed = true;
-                        Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({this.key}) removed! (locking count: {RefCount}, keys count: {tmpHost.Count})");
+                        Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({this.key}) removed! (locking usage: {Usage}, keys count: {tmpHost.Count})");
                     }
                 }
             }
@@ -85,6 +85,11 @@ namespace Dao.IndividualLock
 
         public int Count => this.objects.Count;
 
+        public int Usage(TKey key)
+        {
+            return this.objects.TryGetValue(key, out var value) ? value.Usage : 0;
+        }
+
         LockingObject GetLocker(TKey key)
         {
             NewEntry:
@@ -95,7 +100,7 @@ namespace Dao.IndividualLock
                     goto NewEntry;
 
                 locker.Capture();
-                Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({key}) acquiring the lock... (locking count: {locker.RefCount}, keys count: {Count})");
+                Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({key}) acquiring the lock... (locking usage: {locker.Usage}, keys count: {Count})");
                 return locker;
             }
         }
@@ -109,12 +114,12 @@ namespace Dao.IndividualLock
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({key}) cancelled. (locking count: {locker.RefCount}, keys count: {Count})");
+                Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({key}) cancelled. (locking usage: {locker.Usage}, keys count: {Count})");
                 locker.Release(false);
                 throw;
             }
 
-            Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({key}) got the lock! (locking count: {locker.RefCount}, keys count: {Count})");
+            Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({key}) got the lock! (locking usage: {locker.Usage}, keys count: {Count})");
             return locker;
         }
 
@@ -127,12 +132,12 @@ namespace Dao.IndividualLock
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({key}) cancelled async. (locking count: {locker.RefCount}, keys count: {Count})");
+                Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({key}) cancelled async. (locking usage: {locker.Usage}, keys count: {Count})");
                 locker.Release(false);
                 throw;
             }
 
-            Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({key}) got the lock async! (locking count: {locker.RefCount}, keys count: {Count})");
+            Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({key}) got the lock async! (locking usage: {locker.Usage}, keys count: {Count})");
             return locker;
         }
     }

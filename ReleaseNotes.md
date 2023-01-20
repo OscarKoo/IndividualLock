@@ -2,6 +2,10 @@
 
 ## IndividualLocks
 
+### 3.0.3
+
+Add "Usage" of each key.
+
 ### 3.0.2
 
 Optimize the code.
@@ -45,6 +49,10 @@ Improve the logic of cleanup.
 Start point.
 
 ## IndividualReadWriteLocks
+
+### 1.0.2
+
+Add "Usage" of each key.
 
 ### 1.0.1
 

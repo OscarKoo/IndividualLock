@@ -4,7 +4,7 @@
     <TargetFrameworks>NET45;</TargetFrameworks>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageId>Dao.IndividualLock</PackageId>
-    <Version>3.0.2.0</Version>
+    <Version>3.0.3.0</Version>
     <Authors>Oscar Koo</Authors>
     <Description>sync / async lock for individual separate key</Description>
     <PackageLicenseUrl>https://github.com/OscarKoo/IndividualLock/blob/master/LICENSE</PackageLicenseUrl>
