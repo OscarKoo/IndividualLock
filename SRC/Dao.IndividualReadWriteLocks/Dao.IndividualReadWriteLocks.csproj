@@ -13,7 +13,7 @@
     <PackageReleaseNotes>Visit the project's url to see the Release Notes</PackageReleaseNotes>
     <Copyright>Copyright 2019 Oscar Koo</Copyright>
     <PackageTags>sync async lock individual separate key</PackageTags>
-    <RepositoryUrl>https://www.nuget.org/packages/Dao.IndividualLock</RepositoryUrl>
+    <RepositoryUrl>https://www.nuget.org/packages/Dao.IndividualReadWriteLock</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
