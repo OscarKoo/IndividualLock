@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>NET45;</TargetFrameworks>
+    <TargetFrameworks>NETSTANDARD2.0;NET45;NETCOREAPP2.0;</TargetFrameworks>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageId>Dao.IndividualLock</PackageId>
     <Version>3.0.3.0</Version>
@@ -15,12 +15,6 @@
     <PackageTags>sync async lock individual separate key</PackageTags>
     <RepositoryUrl>https://www.nuget.org/packages/Dao.IndividualLock</RepositoryUrl>
   </PropertyGroup>
-
-
-
-  <ItemGroup>
-    <PackageReference Include="Dao.ConcurrentDictionaryLazy" Version="1.2.0" />
-  </ItemGroup>
 
   <ItemGroup>
     <Reference Include="System.ServiceModel">

@@ -17,7 +17,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dao.ConcurrentDictionaryLazy" Version="1.2.0" />
     <PackageReference Include="Nito.AsyncEx" Version="4.0.1" />
   </ItemGroup>
 

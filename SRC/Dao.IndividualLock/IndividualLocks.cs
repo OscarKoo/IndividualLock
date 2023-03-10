@@ -1,9 +1,9 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Dao.ConcurrentDictionaryLazy;
 
 namespace Dao.IndividualLock
 {
@@ -27,7 +27,7 @@ namespace Dao.IndividualLock
             }
 
             volatile int usage;
-            internal int Usage => this.usage;
+            internal int Usage => Interlocked.CompareExchange(ref this.usage, 0, 0);
 
             volatile bool disposed;
             internal bool Disposed => this.disposed;
@@ -39,7 +39,7 @@ namespace Dao.IndividualLock
                     if (this.disposed)
                         throw new ObjectDisposedException(nameof(LockingObject));
 
-                    this.usage++;
+                    Interlocked.Increment(ref this.usage);
                 }
             }
 
@@ -47,7 +47,7 @@ namespace Dao.IndividualLock
             {
                 lock (this.syncObj)
                 {
-                    this.usage--;
+                    Interlocked.Decrement(ref this.usage);
                     if (release)
                     {
                         this.locker.Release();
@@ -60,7 +60,7 @@ namespace Dao.IndividualLock
                         this.host = null;
                         var tmpKey = this.key;
                         this.key = default(TKey);
-                        tmpHost.objects.Remove(tmpKey);
+                        tmpHost.objects.TryRemove(tmpKey, out var value);
                         this.locker.Dispose();
                         this.disposed = true;
                         Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({this.key}) removed! (locking usage: {Usage}, keys count: {tmpHost.Count})");
@@ -76,11 +76,11 @@ namespace Dao.IndividualLock
 
         #endregion
 
-        readonly ConcurrentDictionaryLazy<TKey, LockingObject> objects;
+        readonly ConcurrentDictionary<TKey, LockingObject> objects;
 
         public IndividualLocks(IEqualityComparer<TKey> comparer = null)
         {
-            this.objects = new ConcurrentDictionaryLazy<TKey, LockingObject>(comparer ?? EqualityComparer<TKey>.Default);
+            this.objects = new ConcurrentDictionary<TKey, LockingObject>(comparer ?? EqualityComparer<TKey>.Default);
         }
 
         public int Count => this.objects.Count;
