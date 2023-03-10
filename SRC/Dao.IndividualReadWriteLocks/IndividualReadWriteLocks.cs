@@ -89,8 +89,9 @@ namespace Dao.IndividualReadWriteLocks
             {
                 var tmpObj = this.obj;
                 this.obj = null;
-                tmpObj.Release(this.disposable.Dispose);
+                var tmpDisposable = this.disposable;
                 this.disposable = null;
+                tmpObj.Release(tmpDisposable.Dispose);
             }
         }
 
