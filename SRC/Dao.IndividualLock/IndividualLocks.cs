@@ -60,7 +60,7 @@ namespace Dao.IndividualLock
                         this.host = null;
                         var tmpKey = this.key;
                         this.key = default(TKey);
-                        tmpHost.objects.TryRemove(tmpKey, out var value);
+                        tmpHost.objects.TryRemove(tmpKey, out _);
                         this.locker.Dispose();
                         this.disposed = true;
                         Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({this.key}) removed! (locking usage: {Usage}, keys count: {tmpHost.Count})");
