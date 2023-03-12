@@ -14,7 +14,7 @@ namespace Dao.IndividualLock
 
         sealed class LockingObject : IDisposable
         {
-            internal readonly object syncObj = new object();
+            readonly object syncObj = new object();
             internal readonly SemaphoreSlim locker = new SemaphoreSlim(1, 1);
 
             TKey key;
@@ -27,19 +27,19 @@ namespace Dao.IndividualLock
             }
 
             volatile int usage;
-            internal int Usage => Interlocked.CompareExchange(ref this.usage, 0, 0);
+            internal int Usage => this.usage;
 
             volatile bool disposed;
-            internal bool Disposed => this.disposed;
 
-            internal void Capture()
+            internal LockingObject Capture()
             {
                 lock (this.syncObj)
                 {
                     if (this.disposed)
-                        throw new ObjectDisposedException(nameof(LockingObject));
+                        return null;
 
-                    Interlocked.Increment(ref this.usage);
+                    this.usage++;
+                    return this;
                 }
             }
 
@@ -47,7 +47,7 @@ namespace Dao.IndividualLock
             {
                 lock (this.syncObj)
                 {
-                    Interlocked.Decrement(ref this.usage);
+                    this.usage--;
                     if (release)
                     {
                         this.locker.Release();
@@ -59,7 +59,7 @@ namespace Dao.IndividualLock
                         var tmpHost = this.host;
                         this.host = null;
                         var tmpKey = this.key;
-                        this.key = default(TKey);
+                        this.key = default;
                         tmpHost.objects.TryRemove(tmpKey, out _);
                         this.locker.Dispose();
                         this.disposed = true;
@@ -76,33 +76,30 @@ namespace Dao.IndividualLock
 
         #endregion
 
-        readonly ConcurrentDictionary<TKey, LockingObject> objects;
+        readonly ConcurrentDictionary<TKey, Lazy<LockingObject>> objects;
 
         public IndividualLocks(IEqualityComparer<TKey> comparer = null)
         {
-            this.objects = new ConcurrentDictionary<TKey, LockingObject>(comparer ?? EqualityComparer<TKey>.Default);
+            this.objects = new ConcurrentDictionary<TKey, Lazy<LockingObject>>(comparer ?? EqualityComparer<TKey>.Default);
         }
 
         public int Count => this.objects.Count;
 
         public int Usage(TKey key)
         {
-            return this.objects.TryGetValue(key, out var value) ? value.Usage : 0;
+            return this.objects.TryGetValue(key, out var value) ? value.Value.Usage : 0;
         }
 
         LockingObject GetLocker(TKey key)
         {
-            NewEntry:
-            var locker = this.objects.GetOrAdd(key, k => new LockingObject(this, k));
-            lock (locker.syncObj)
+            LockingObject locker;
+            do
             {
-                if (locker.Disposed)
-                    goto NewEntry;
+                locker = this.objects.GetOrAdd(key, k => new Lazy<LockingObject>(() => new LockingObject(this, k))).Value.Capture();
+            } while (locker == null);
 
-                locker.Capture();
-                Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({key}) acquiring the lock... (locking usage: {locker.Usage}, keys count: {Count})");
-                return locker;
-            }
+            Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({key}) acquiring the lock... (locking usage: {locker.Usage}, keys count: {Count})");
+            return locker;
         }
 
         public IDisposable Lock(TKey key, CancellationToken cancellationToken = new CancellationToken())
@@ -112,7 +109,7 @@ namespace Dao.IndividualLock
             {
                 locker.locker.Wait(cancellationToken);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({key}) cancelled. (locking usage: {locker.Usage}, keys count: {Count})");
                 locker.Release(false);
@@ -130,7 +127,7 @@ namespace Dao.IndividualLock
             {
                 await locker.locker.WaitAsync(cancellationToken).ConfigureAwait(false);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({key}) cancelled async. (locking usage: {locker.Usage}, keys count: {Count})");
                 locker.Release(false);
