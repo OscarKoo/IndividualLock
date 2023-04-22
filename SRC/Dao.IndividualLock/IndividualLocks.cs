@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -74,21 +75,38 @@ namespace Dao.IndividualLock
             }
         }
 
+        sealed class MultipleLockingObject : IDisposable
+        {
+            IReadOnlyList<IDisposable> lockingObjects;
+
+            internal MultipleLockingObject(IReadOnlyList<IDisposable> lockingObjects) => this.lockingObjects = lockingObjects;
+
+            public void Dispose()
+            {
+                if (this.lockingObjects == null || this.lockingObjects.Count <= 0)
+                    return;
+
+                for (var i = this.lockingObjects.Count - 1; i >= 0; i--)
+                {
+                    this.lockingObjects[i].Dispose();
+                }
+
+                this.lockingObjects = null;
+            }
+        }
+
         #endregion
 
         readonly ConcurrentDictionary<TKey, Lazy<LockingObject>> objects;
 
-        public IndividualLocks(IEqualityComparer<TKey> comparer = null)
-        {
+        public IndividualLocks(IEqualityComparer<TKey> comparer = null) =>
             this.objects = new ConcurrentDictionary<TKey, Lazy<LockingObject>>(comparer ?? EqualityComparer<TKey>.Default);
-        }
 
         public int Count => this.objects.Count;
 
-        public int Usage(TKey key)
-        {
-            return this.objects.TryGetValue(key, out var value) ? value.Value.Usage : 0;
-        }
+        public int Usage(TKey key) => this.objects.TryGetValue(key, out var value) ? value.Value.Usage : 0;
+
+        public int Usage(IEnumerable<TKey> keys) => keys.Select(key => this.objects.TryGetValue(key, out var value) ? value.Value.Usage : 0).Max();
 
         LockingObject GetLocker(TKey key)
         {
@@ -100,6 +118,17 @@ namespace Dao.IndividualLock
 
             Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({key}) acquiring the lock... (locking usage: {locker.Usage}, keys count: {Count})");
             return locker;
+        }
+
+        static void DisposeMultiple(IReadOnlyList<IDisposable> lockingObjects)
+        {
+            if (lockingObjects.Count <= 0)
+                return;
+
+            for (var i = lockingObjects.Count - 1; i >= 0; i--)
+            {
+                lockingObjects[i].Dispose();
+            }
         }
 
         public IDisposable Lock(TKey key, CancellationToken cancellationToken = new CancellationToken())
@@ -120,6 +149,25 @@ namespace Dao.IndividualLock
             return locker;
         }
 
+        public IDisposable Lock(IEnumerable<TKey> keys, IComparer<TKey> comparer = null, CancellationToken cancellationToken = new CancellationToken())
+        {
+            var lockingObjects = new List<IDisposable>();
+            foreach (var key in keys.OrderBy(o => o, comparer ?? Comparer<TKey>.Default))
+            {
+                try
+                {
+                    lockingObjects.Add(Lock(key, cancellationToken));
+                }
+                catch (Exception ex)
+                {
+                    DisposeMultiple(lockingObjects);
+                    throw;
+                }
+            }
+
+            return new MultipleLockingObject(lockingObjects.AsReadOnly());
+        }
+
         public async Task<IDisposable> LockAsync(TKey key, CancellationToken cancellationToken = new CancellationToken())
         {
             var locker = GetLocker(key);
@@ -136,6 +184,25 @@ namespace Dao.IndividualLock
 
             Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd:HH:mm:ss.fff} ({Thread.CurrentThread.ManagedThreadId})] Key ({key}) got the lock async! (locking usage: {locker.Usage}, keys count: {Count})");
             return locker;
+        }
+
+        public async Task<IDisposable> LockAsync(IEnumerable<TKey> keys, IComparer<TKey> comparer = null, CancellationToken cancellationToken = new CancellationToken())
+        {
+            var lockingObjects = new List<IDisposable>();
+            foreach (var key in keys.OrderBy(o => o, comparer ?? Comparer<TKey>.Default))
+            {
+                try
+                {
+                    lockingObjects.Add(await LockAsync(key, cancellationToken));
+                }
+                catch (Exception ex)
+                {
+                    DisposeMultiple(lockingObjects);
+                    throw;
+                }
+            }
+
+            return new MultipleLockingObject(lockingObjects.AsReadOnly());
         }
     }
 }
