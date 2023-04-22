@@ -67,6 +67,32 @@ public async Task WorkAsync(string city, string area)
 }
 ```
 
+Multiple Keys Lock, only one of the Works (Work1 & Work2) will get the lock
+
+```C#
+static readonly IndividualLocks<string> mutex = new IndividualLocks<string>();
+
+public void Work1()
+{
+    var keys = new [] {"Key1", "Key2"};
+
+    using (mutex.Lock(keys))
+    {
+        // Do tasks
+    }
+}
+
+public void Work2()
+{
+    var keys = new [] {"Key2", "Key3"};
+
+    using (mutex.Lock(keys))
+    {
+        // Do tasks
+    }
+}
+```
+
 IndividualReadWriteLocks Examples
 
 ```C#

@@ -193,7 +193,7 @@ namespace Dao.IndividualLock
             {
                 try
                 {
-                    lockingObjects.Add(await LockAsync(key, cancellationToken));
+                    lockingObjects.Add(await LockAsync(key, cancellationToken).ConfigureAwait(false));
                 }
                 catch (Exception ex)
                 {

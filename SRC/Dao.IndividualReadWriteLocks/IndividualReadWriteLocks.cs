@@ -106,7 +106,7 @@ namespace Dao.IndividualReadWriteLocks
 
             public async Task<IDisposable> UpgradeAsync(CancellationToken cancellationToken = new CancellationToken())
             {
-                return await ((AsyncReaderWriterLock.UpgradeableReaderKey)this.disposable).UpgradeAsync(cancellationToken);
+                return await ((AsyncReaderWriterLock.UpgradeableReaderKey)this.disposable).UpgradeAsync(cancellationToken).ConfigureAwait(false);
             }
         }
 
