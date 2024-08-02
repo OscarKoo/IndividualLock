@@ -97,10 +97,14 @@ namespace Dao.IndividualLock
 
         #endregion
 
+        readonly IEqualityComparer<TKey> keyComparer;
         readonly ConcurrentDictionary<TKey, Lazy<LockingObject>> objects;
 
-        public IndividualLocks(IEqualityComparer<TKey> comparer = null) =>
-            this.objects = new ConcurrentDictionary<TKey, Lazy<LockingObject>>(comparer ?? EqualityComparer<TKey>.Default);
+        public IndividualLocks(IEqualityComparer<TKey> comparer = null)
+        {
+            this.keyComparer = comparer ?? EqualityComparer<TKey>.Default;
+            this.objects = new ConcurrentDictionary<TKey, Lazy<LockingObject>>(this.keyComparer);
+        }
 
         public int Count => this.objects.Count;
 
@@ -152,7 +156,7 @@ namespace Dao.IndividualLock
         public IDisposable Lock(IEnumerable<TKey> keys, IComparer<TKey> comparer = null, CancellationToken cancellationToken = new CancellationToken())
         {
             var lockingObjects = new List<IDisposable>();
-            foreach (var key in keys.OrderBy(o => o, comparer ?? Comparer<TKey>.Default))
+            foreach (var key in keys.Distinct(this.keyComparer).OrderBy(o => o, comparer ?? Comparer<TKey>.Default))
             {
                 try
                 {
@@ -189,7 +193,7 @@ namespace Dao.IndividualLock
         public async Task<IDisposable> LockAsync(IEnumerable<TKey> keys, IComparer<TKey> comparer = null, CancellationToken cancellationToken = new CancellationToken())
         {
             var lockingObjects = new List<IDisposable>();
-            foreach (var key in keys.OrderBy(o => o, comparer ?? Comparer<TKey>.Default))
+            foreach (var key in keys.Distinct(this.keyComparer).OrderBy(o => o, comparer ?? Comparer<TKey>.Default))
             {
                 try
                 {
